@@ -1,0 +1,29 @@
+name: Deploy FastAPI to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Create Private Key File
+        run: |
+          echo "${{ secrets.EC2_PEM_KEY }}" > my-key.pem
+          chmod 400 my-key.pem
+
+      - name: Deploy to EC2 Using .pem File
+        run: |
+          ssh -o StrictHostKeyChecking=no -i my-key.pem ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+            cd /home/ubuntu/Fastapi
+            git pull origin main
+            source venv/bin/activate
+            pip install -r requirements.txt
+            nohup uvicorn main:app --host 0.0.0.0 --port 8000 > output.log 2>&1 &
+          EOF
