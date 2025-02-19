@@ -107,7 +107,11 @@ async def register(user: UserSignup, db: Session = Depends(get_db)):
     )
 @router.post("/login",)
 def login(user: UserLogin, db: Session = Depends(get_db)):
-    existing_user = db.query(User).filter(User.email == user.email).first()
+    existing_user = db.query(User).filter(
+        (User.email == user.username) |
+        (User.phone_number == user.username) |
+        (User.pan_number == user.username)
+    ).first()
     
     if not existing_user:
         return format_response(
@@ -323,9 +327,13 @@ async def resend_otp(db: Session = Depends(get_db), current_user: User = Depends
     
 
 @router.post("/forgot_password")
-async def forgot_password(email: EmailStr, db: Session = Depends(get_db)):
+async def forgot_password(username: str, db: Session = Depends(get_db)):
     # Check if user exists
-    user = db.query(User).filter(User.email == str(email)).first()
+    user = db.query(User).filter(
+        (User.email == username) |
+        (User.phone_number == username) |
+        (User.pan_number == username)
+    ).first()
     if not user:
         return format_response(
             status="error",
@@ -370,6 +378,13 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
         return format_response(
             status="error",
             message="Otp not verified",
+            status_code=404,
+            status_message="Not Found"
+        )
+    if user.answer_verified==False:
+        return format_response(
+            status="error",
+            message="Security questions not answered",
             status_code=404,
             status_message="Not Found"
         )
