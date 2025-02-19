@@ -18,12 +18,23 @@ jobs:
           echo "${{ secrets.EC2_PEM_KEY }}" > my-key.pem
           chmod 400 my-key.pem
 
-      - name: Deploy to EC2 Using .pem File
+      - name: Deploy to EC2
         run: |
           ssh -o StrictHostKeyChecking=no -i my-key.pem ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
             cd /home/ubuntu/Fastapi
+            
+            # Pull latest code
             git pull origin main
+
+            # Activate virtual environment
             source venv/bin/activate
+
+            # Install dependencies
+            pip install --upgrade pip
             pip install -r requirements.txt
-            nohup uvicorn main:app --host 0.0.0.0 --port 8000 > output.log 2>&1 &
+
+            # Restart FastAPI using systemd
+            sudo systemctl daemon-reload
+            sudo systemctl restart fastapi
+            sudo systemctl status fastapi --no-pager
           EOF
